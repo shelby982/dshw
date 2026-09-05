@@ -114,3 +114,30 @@ export interface RequestImageAttachment {
   /** Whether the encoded request version retains an alpha channel. */
   hasAlpha: boolean
 }
+
+/** Durable, serializable reference to one immutable general-file attachment. */
+export interface FileAttachmentRef {
+  /** Opaque storage identifier; never a filesystem path or bearer URL. */
+  attachmentId: AttachmentId
+  /** MIME type verified from the stored bytes. */
+  mediaType: string
+  /** Exact encoded byte length. */
+  bytes: number
+  /** Optional display name stripped of local path information. */
+  name?: string
+}
+
+/** Request to validate and durably commit one general-file attachment. */
+export interface SaveFileAttachment {
+  data: Uint8Array
+  /** Known MIME type for the bytes. */
+  mediaType: string
+  /** Optional display name stripped of local path information. */
+  name?: string
+}
+
+/** Bytes returned after reference and digest verification for one general file. */
+export interface StoredFileAttachment {
+  ref: FileAttachmentRef
+  data: Uint8Array
+}

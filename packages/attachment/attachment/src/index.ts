@@ -3,11 +3,14 @@
 import { Context, Service } from '@deepseek-ai/cordis'
 import { AttachmentError } from './error.ts'
 import type {
+  FileAttachmentRef,
   ImageAttachmentLimits,
   ImageAttachmentRef,
   ImageRequestPolicy,
   RequestImageAttachment,
+  SaveFileAttachment,
   SaveImageAttachment,
+  StoredFileAttachment,
   StoredImageAttachment,
 } from './types.ts'
 
@@ -20,19 +23,23 @@ export type {
   AttachmentId as AttachmentIdType,
   AdmittedPromptContentPart,
   EncodedImageAttachment,
+  FileAttachmentRef,
   ImageAttachmentLimits,
   ImageAttachmentRef,
   ImageRequestPolicy,
   ImageMediaType,
   PromptContentPart,
   RequestImageAttachment,
+  SaveFileAttachment,
   SaveImageAttachment,
+  StoredFileAttachment,
   StoredImageAttachment,
 } from './types.ts'
 
 declare module '@deepseek-ai/cordis' {
   interface Context {
     attachments: AttachmentStore
+    fileAttachments: FileAttachmentStore
   }
 }
 
@@ -140,6 +147,41 @@ export abstract class AttachmentStore extends Service {
       'The mounted attachment provider cannot derive model-request images.',
       'ATTACHMENT_PROJECTION_UNSUPPORTED',
     ))
+  }
+
+}
+
+/** Durable immutable general-file attachment storage seam (`ctx.fileAttachments`). */
+export abstract class FileAttachmentStore extends Service {
+  constructor(ctx: Context) {
+    super(ctx, 'fileAttachments')
+  }
+
+  /**
+   * Validate and durably commit one general-file attachment.
+   * @param input - bytes, known MIME type, and optional display name.
+   * @returns the durable content-addressed file reference.
+   */
+  abstract saveFile(input: SaveFileAttachment): Promise<FileAttachmentRef>
+
+  /**
+   * Read one general-file attachment and verify that bytes still match the reference.
+   * @param ref - durable reference from the session log.
+   * @param signal - optional cancellation for backend read and verification work.
+   * @returns the verified bytes and reference.
+   * @throws the signal reason when aborted, or an AttachmentError when verification fails.
+   */
+  abstract readFile(ref: FileAttachmentRef, signal?: AbortSignal): Promise<StoredFileAttachment>
+
+  /**
+   * Locate the provider-owned object in the harness host filesystem.
+   * @param ref - durable file attachment reference.
+   * @returns an absolute host path, or undefined when this backend is not host-file-backed.
+   * @throws an AttachmentError when the durable reference is invalid.
+   */
+  fileHostPath(ref: FileAttachmentRef): string | undefined {
+    void ref
+    return undefined
   }
 
 }
