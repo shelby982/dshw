@@ -38,7 +38,15 @@ import { previewKindOf, previewsFromMeta } from '@deepseek-ai/dsh-preview'
 - `previewsFromMeta` 把不透明的 `meta` 窄化为产出预览；载荷缺失或畸形时返回 `undefined`，因此畸形或历史结果会失败关闭而非渲染幽灵。
 - `previewKindOf(mediaType)` 把 MIME 类型映射到 `PreviewKind`。
 
-<a id="known-limitations-and-deferred-work"></a>
+<a id="model-experience"></a>
+## Model Experience
+
+无,本包是持久的预览契约 —— 工具结果 `meta` 载荷与纯读者。产出文件工具与浏览器渲染器拥有任何面向模型的影响。
+
+#### KV Cache effect
+
+无直接影响;产出文件工具与 `previewFile` RPC 拥有该契约记录的任何模型可见行为。
+
 ## Known Limitations and Deferred Work
 
 - 目前**尚无消费端**：没有任何产出文件工具记录 `previews`，会话授权或渲染器也没有读它。该契约是 `preview-local`、`tool-preview`、`ui-preview` 各组件构建的地基。

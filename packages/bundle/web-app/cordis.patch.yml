@@ -237,6 +237,12 @@
     - id: ui-deliverables
       name: '@deepseek-ai/dsh-client-ui-deliverables'
 
+    # Turn tail: the produced-file preview row (image/html/text/json) under
+    # each closing assistant message. Remove this entry to turn previews off;
+    # the tail hole renders empty.
+    - id: ui-preview
+      name: '@deepseek-ai/dsh-client-ui-preview'
+
 
     - id: ui-workspace
       name: '@deepseek-ai/dsh-client-ui-workspace'

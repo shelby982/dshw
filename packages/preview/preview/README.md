@@ -38,7 +38,15 @@ import { previewKindOf, previewsFromMeta } from '@deepseek-ai/dsh-preview'
 - `previewsFromMeta` narrows opaque `meta` to produced previews; it returns `undefined` when the payload is absent or malformed, so a malformed or legacy result fails closed instead of rendering a ghost.
 - `previewKindOf(mediaType)` maps a MIME type to a `PreviewKind`.
 
-<a id="known-limitations-and-deferred-work"></a>
+<a id="model-experience"></a>
+## Model Experience
+
+None, as this package is the durable preview contract whose model-facing effect belongs to the produced-file tool and the browser renderer.
+
+#### KV Cache effect
+
+No direct effect; the produced-file tool and the `previewFile` RPC own any model-visible behavior the contract records.
+
 ## Known Limitations and Deferred Work
 
 - There is currently **no consumer**: no produced-file tool yet records `previews`, and no session authorization or renderer reads it yet. The contract is the foundation the `preview-local`, `tool-preview`, and `ui-preview` pieces build on.

@@ -39,7 +39,29 @@ The default composition already mounts it alongside `@deepseek-ai/dsh-attachment
 - The references are recorded in the tool result's `previews` metadata (keys of `tool/result`), which the `previewFile` session RPC authorizes and a browser renderer rebuilds from.
 - Only the count reaches the model; attachment bytes and digests never enter model-visible content.
 
-<a id="known-limitations-and-deferred-work"></a>
+<a id="model-experience"></a>
+## Model Experience
+
+### preview_files tool
+
+#### What the model sees
+
+The `preview_files(files)` tool. The model names the produced files it wants registered; each is read from the session workspace, stored via `ctx.fileAttachments.saveFile`, and recorded in the tool result's `previews` meta. The tool's own description is what reaches the model; the attachment bytes and digests never enter model-visible content.
+
+##### preview_files description
+
+```markdown
+Register produced files (images, HTML, slides, documents) so the user can preview their rendered content in the Web GUI.
+```
+
+#### Token effect
+
+The tool schema and one tool call per registration batch. The tool ships a small, fixed description; `previews` meta is tool-private and not model-visible.
+
+#### KV Cache effect
+
+The tool schema enters the prompt prefix once per session. The result-time `previews` meta is logged but does not feed back into the prompt, so it does not churn the KV cache.
+
 ## Known Limitations and Deferred Work
 
 - No browser renderer consumes the `previews` metadata yet (`ui-preview` is the pending piece); until then the tool records references that only the `previewFile` RPC can read back.

@@ -39,7 +39,29 @@ kind: "package-reference"
 - 引用记录在工具结果的 `previews` 元数据（`tool/result` 的键）中，由 `previewFile` 会话 RPC 鉴权，并供浏览器渲染器重建。
 - 只有计数到达模型；附件字节与摘要从不进入模型可见内容。
 
-<a id="known-limitations-and-deferred-work"></a>
+<a id="model-experience"></a>
+## Model Experience
+
+### preview_files 工具
+
+#### 模型看到什么
+
+`preview_files(files)` 工具。模型点名它要登记的产出文件；每个文件从会话工作区读取、经 `ctx.fileAttachments.saveFile` 存储,并记录在工具结果的 `previews` meta 中。到达模型的是工具自身的描述;附件字节与摘要从不进入模型可见内容。
+
+##### preview_files description
+
+```markdown
+Register produced files (images, HTML, slides, documents) so the user can preview their rendered content in the Web GUI.
+```
+
+#### Token 影响
+
+工具 schema 与每次登记批次的一次工具调用。该工具携带小而固定的描述;`previews` meta 属工具私有,非模型可见。
+
+#### KV Cache 影响
+
+工具 schema 每会话进入提示前缀一次。结果时的 `previews` meta 被记录但不回馈到提示,因此不会搅动 KV 缓存。
+
 ## Known Limitations and Deferred Work
 
 - 尚无浏览器渲染器消费 `previews` 元数据（`ui-preview` 是待办部分）；在此之前工具记录下的引用只能由 `previewFile` RPC 读回。
