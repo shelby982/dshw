@@ -838,6 +838,33 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
     ],
   },
   {
+    key: 'fileAttachments',
+    summary: 'Durable immutable general-file attachment storage seam (`ctx.fileAttachments`).',
+    description: 'Durable immutable general-file attachment storage seam (`ctx.fileAttachments`).',
+    methods: [
+      {
+        signature: 'abstract saveFile(input: SaveFileAttachment): Promise<FileAttachmentRef>',
+        description: 'Validate and durably commit one general-file attachment.',
+        parameters: [{ name: 'input', description: 'bytes, known MIME type, and optional display name.' }],
+        returns: 'the durable content-addressed file reference.',
+      },
+      {
+        signature: 'abstract readFile(ref: FileAttachmentRef, signal?: AbortSignal): Promise<StoredFileAttachment>',
+        description: 'Read one general-file attachment and verify that bytes still match the reference.',
+        parameters: [{ name: 'ref', description: 'durable reference from the session log.' }, { name: 'signal', description: 'optional cancellation for backend read and verification work.' }],
+        returns: 'the verified bytes and reference.',
+        throws: ['the signal reason when aborted, or an AttachmentError when verification fails.'],
+      },
+      {
+        signature: 'fileHostPath(ref: FileAttachmentRef): string | undefined',
+        description: 'Locate the provider-owned object in the harness host filesystem.',
+        parameters: [{ name: 'ref', description: 'durable file attachment reference.' }],
+        returns: 'an absolute host path, or undefined when this backend is not host-file-backed.',
+        throws: ['an AttachmentError when the durable reference is invalid.'],
+      },
+    ],
+  },
+  {
     key: 'fileReferences',
     summary: 'Host capability for cancellable file-reference discovery.',
     description: 'Host capability for cancellable file-reference discovery.',
@@ -1412,6 +1439,12 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
         description: 'Read one image proven reachable from the addressed Session log.',
         parameters: [{ name: 'request', description: 'Session and attachment identities used for authorization.' }],
         returns: 'the durable attachment reference and base64-encoded bytes.',
+      },
+      {
+        signature: '@Remote(\'previewFile\') previewFile(request: SessionPreviewFileRequest): Promise<SessionPreviewFileValue>',
+        description: 'Read one produced file proven reachable from the addressed Session log.',
+        parameters: [{ name: 'request', description: 'Session and file attachment identities used for authorization.' }],
+        returns: 'the durable file attachment reference and base64-encoded bytes.',
       },
       {
         signature: '@Remote(\'updateQueue\') updateQueue(request: SessionUpdateQueueRequest): SessionUpdateQueueValue',
@@ -3957,6 +3990,10 @@ export const TYPE_API: readonly TypeApiEntry[] = [
     declaration: 'export type FiberState = FiberStateEnum;',
   },
   {
+    name: 'FileAttachmentRef',
+    declaration: 'export interface FileAttachmentRef {\n    attachmentId: AttachmentId;\n    mediaType: string;\n    bytes: number;\n    name?: string;\n}',
+  },
+  {
     name: 'FileDiff',
     declaration: 'export interface FileDiff {\n    path: string;\n    oldText: string | null;\n    newText: string;\n}',
   },
@@ -4697,6 +4734,10 @@ export const TYPE_API: readonly TypeApiEntry[] = [
     declaration: 'export interface SandboxPolicyRequest {\n    session?: Session;\n    mode?: SandboxMode;\n}',
   },
   {
+    name: 'SaveFileAttachment',
+    declaration: 'export interface SaveFileAttachment {\n    data: Uint8Array;\n    mediaType: string;\n    name?: string;\n}',
+  },
+  {
     name: 'SaveImageAttachment',
     declaration: 'export interface SaveImageAttachment {\n    data: Uint8Array;\n    mediaType: ImageMediaType;\n    name?: string;\n}',
   },
@@ -4995,6 +5036,14 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   {
     name: 'SessionPersistenceStatOptions',
     declaration: 'export interface SessionPersistenceStatOptions {\n    readonly signal?: AbortSignal;\n}',
+  },
+  {
+    name: 'SessionPreviewFileRequest',
+    declaration: 'export interface SessionPreviewFileRequest {\n    readonly sessionId: SessionId;\n    readonly attachmentId: AttachmentIdType;\n}',
+  },
+  {
+    name: 'SessionPreviewFileValue',
+    declaration: 'export interface SessionPreviewFileValue {\n    readonly attachment: FileAttachmentRef;\n    readonly data: string;\n}',
   },
   {
     name: 'SessionProjectionBaseline',
@@ -5383,6 +5432,10 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   {
     name: 'StorageForms',
     declaration: 'export interface StorageForms {\n}',
+  },
+  {
+    name: 'StoredFileAttachment',
+    declaration: 'export interface StoredFileAttachment {\n    ref: FileAttachmentRef;\n    data: Uint8Array;\n}',
   },
   {
     name: 'StoredImageAttachment',

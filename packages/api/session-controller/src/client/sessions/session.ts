@@ -2,7 +2,7 @@
 
 import type { Context } from '@deepseek-ai/cordis'
 import { randomUUID } from '@deepseek-ai/dsh-util-crypto'
-import type { AttachmentIdType, ImageAttachmentRef } from '@deepseek-ai/dsh-attachment'
+import type { AttachmentIdType, FileAttachmentRef, ImageAttachmentRef } from '@deepseek-ai/dsh-attachment'
 import type { SubagentAddress } from '@deepseek-ai/dsh-subagent/client'
 import type { MessageId } from '@deepseek-ai/dsh-llm/brand'
 import { SessionLogOffset, SessionSeq, type SessionId } from '@deepseek-ai/dsh-session/types'
@@ -288,6 +288,24 @@ export class Session implements SessionFace {
     attachmentId: AttachmentIdType,
   ): Promise<RemoteResult<{ attachment: ImageAttachmentRef; data: Uint8Array }>> {
     const result = await this.remote.session.attachment({
+      sessionId: this.sessionId,
+      attachmentId,
+    })
+    if (!result.ok) return result
+    const binary = atob(result.value.data)
+    const data = Uint8Array.from(binary, char => char.charCodeAt(0))
+    return { ok: true, value: { attachment: result.value.attachment, data } }
+  }
+
+  /**
+   * Resolve one produced file referenced by this session into browser-consumable bytes.
+   * @param attachmentId - opaque id found in the folded session log's preview metadata.
+   * @returns the authenticated reference and decoded bytes.
+   */
+  async readPreviewFile(
+    attachmentId: AttachmentIdType,
+  ): Promise<RemoteResult<{ attachment: FileAttachmentRef; data: Uint8Array }>> {
+    const result = await this.remote.session.previewFile({
       sessionId: this.sessionId,
       attachmentId,
     })

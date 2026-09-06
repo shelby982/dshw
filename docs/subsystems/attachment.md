@@ -195,4 +195,38 @@ readImageRequest( ref: ImageAttachmentRef, policy: ImageRequestPolicy, signal?: 
 ```
 
 Source: [`packages/attachment/attachment/src/index.ts`](../../packages/attachment/attachment/src/index.ts)
+
+<a id="ctxfileattachments--fileattachmentstore-abstract-seam"></a>
+
+### `ctx.fileAttachments` — `FileAttachmentStore` (abstract seam)
+
+Durable immutable general-file attachment storage seam (`ctx.fileAttachments`).
+
+```ts cordis-catalog
+/**
+ * Validate and durably commit one general-file attachment.
+ * @param input - bytes, known MIME type, and optional display name.
+ * @returns the durable content-addressed file reference.
+ */
+abstract saveFile(input: SaveFileAttachment): Promise<FileAttachmentRef>
+
+/**
+ * Read one general-file attachment and verify that bytes still match the reference.
+ * @param ref - durable reference from the session log.
+ * @param signal - optional cancellation for backend read and verification work.
+ * @returns the verified bytes and reference.
+ * @throws the signal reason when aborted, or an AttachmentError when verification fails.
+ */
+abstract readFile(ref: FileAttachmentRef, signal?: AbortSignal): Promise<StoredFileAttachment>
+
+/**
+ * Locate the provider-owned object in the harness host filesystem.
+ * @param ref - durable file attachment reference.
+ * @returns an absolute host path, or undefined when this backend is not host-file-backed.
+ * @throws an AttachmentError when the durable reference is invalid.
+ */
+fileHostPath(ref: FileAttachmentRef): string | undefined
+```
+
+Source: [`packages/attachment/attachment/src/index.ts`](../../packages/attachment/attachment/src/index.ts)
 <!-- END GENERATED cordis-surface -->
