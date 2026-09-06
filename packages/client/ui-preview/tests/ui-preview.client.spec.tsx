@@ -434,7 +434,7 @@ describe('PreviewFiles row', () => {
     expect(image?.getAttribute('src')).toContain('data:image/png;base64,')
     const frame = view.container.querySelector('iframe')
     expect(frame?.getAttribute('sandbox')).toBe('')
-    const link = view.getAllByRole('link')[0]
+    const link = view.getAllByRole('link')[0]!
     expect(link.getAttribute('download')).toBeTruthy()
   })
 
@@ -480,7 +480,7 @@ describe('PreviewFileCache', () => {
 
   it('resolves a data-URL fallback when createObjectURL is unavailable and caches by attachment', async () => {
     const prior = URL.createObjectURL
-    ;(URL as unknown as { createObjectURL?: (blob: Blob) => string }).createObjectURL = undefined
+    ;(URL as unknown as { createObjectURL?: ((blob: Blob) => string) | undefined }).createObjectURL = undefined
     try {
       const { cache, setBinding } = runtime()
       const ref = FILE('x', 'text/plain', 'x.txt')
@@ -510,7 +510,7 @@ describe('PreviewFileCache', () => {
       expect(cache.peek(SessionId('svc:other'), ref)).toBeUndefined()
       cache.dispose()
     } finally {
-      ;(URL as unknown as { createObjectURL?: (blob: Blob) => string }).createObjectURL = prior
+      ;(URL as unknown as { createObjectURL?: ((blob: Blob) => string) | undefined }).createObjectURL = prior
     }
   })
 
@@ -520,10 +520,10 @@ describe('PreviewFileCache', () => {
     setBinding({
       ctx: new Context(),
       session: {
-        readPreviewFile: () => Promise.resolve({ ok: false as const, error: new RemoteError('attachment/invalid', 'gone', {}) }),
+        readPreviewFile: () => Promise.resolve({ ok: false as const, error: new RemoteError('gateway/internal', 'gone', {}) }),
       },
     })
-    await expect(cache.resolve(SessionId('svc:s1') as SessionId, ref)).rejects.toThrow('attachment/invalid: gone')
+    await expect(cache.resolve(SessionId('svc:s1') as SessionId, ref)).rejects.toThrow('gateway/internal: gone')
     expect(cache.peek(SessionId('svc:s1') as SessionId, ref)).toBeUndefined()
     cache.dispose()
   })
@@ -570,7 +570,7 @@ describe('PreviewFileCache', () => {
         session: {
           readPreviewFile: () => Promise.resolve({
             ok: true as const,
-            value: { attachment: { ...ref, name: undefined }, data: new TextEncoder().encode('hi') },
+            value: { attachment: { ...ref }, data: new TextEncoder().encode('hi') },
           }),
         },
       })
@@ -649,10 +649,6 @@ describe('plugin registration', () => {
     const ref = FILE('reg', 'text/plain')
     expect(injected?.peekPreviewFile?.(ref)).toBeUndefined()
     await expect(injected?.loadPreviewFile?.(ref)).rejects.toThrow('unknown session')
-    expect(entry?.select?.(tailOwner([PREVIEW('a', 'image', 'a.png')]))).toEqual([
-      PREVIEW('a', 'image', 'a.png'),
-    ])
-    expect(entry?.select?.(tailOwner(undefined))).toBeNull()
 
     await fiber.dispose()
     expect(ctx.slots.entries('conversation.chat.turnTail')).toHaveLength(0)

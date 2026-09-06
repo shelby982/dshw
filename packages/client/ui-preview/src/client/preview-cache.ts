@@ -130,7 +130,11 @@ export class PreviewFileCache {
     }
   }
 
-  private dispose(): void {
+  /**
+   * Release every cached URL and clear all entries. Idempotent; safe to call
+   * once the owning fiber teardown or a test has finished with the cache.
+   */
+  dispose(): void {
     if (this.disposed) return
     this.disposed = true
     for (const dispose of [...this.scopeDisposers.values()]) dispose()
