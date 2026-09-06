@@ -2,5 +2,5 @@
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/implemented/architecture/2026-09-06-preview-file-auth-rpc.md
-2026-09-06-preview-file-auth-rpc.md: 0843b275a4f729a330867e04d175d536ba65faeb
-2026-09-06-preview-file-auth-rpc.zh.md: 1ef9ee141d8cb6004e3bd3a13089fe1e4a2dfed7
+2026-09-06-preview-file-auth-rpc.md: ebc782164bb8145dcb6a5befa6aefe69871473b1
+2026-09-06-preview-file-auth-rpc.zh.md: cf7e335d96fd60c60bc7d895043815f0bb57719f

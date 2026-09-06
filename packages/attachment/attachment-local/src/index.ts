@@ -273,7 +273,7 @@ export class LocalFileAttachmentStore extends FileAttachmentStore {
   /** Absolute versioned storage root. */
   readonly root: string
 
-  constructor(ctx: Context, config: Config) {
+  constructor(ctx: Context, config: Config = {}) {
     super(ctx)
     this.root = resolve(join(resolveDshHome(config.dshHome), 'attachments', 'v1'))
   }
