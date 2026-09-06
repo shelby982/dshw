@@ -31,3 +31,4 @@ Status: implemented
 - `gen-cordis-api` 需要给新类型分类：`FileAttachmentRef`/`StoredFileAttachment`/`SaveFileAttachment`（attachment 拥有）、`SessionPreviewFileRequest`/`SessionPreviewFileValue`（会话 wire），并把 `fileAttachments` 服务映射到 attachment 子系统页。
 - 授权失败即关闭：`previews` 载荷缺失或畸形则返回 `ATTACHMENT_NOT_REFERENCED`，读取失败映射为 attachment-invalid 或 internal 远程码。
 - `ctx.fileAttachments` 已通过 `@deepseek-ai/dsh-attachment-local/file-attachments` 子入口 plugin 挂载进 base composition（与图片 `attachment-local` 分行），因此 `previewFile` RPC 与任何产出文件工具都有了可用的服务。
+- `preview_files` 工具（`@deepseek-ai/dsh-tool-preview`，已挂载进 base composition）是模型侧登记方：它从会话工作区读取产出文件，经 `ctx.fileAttachments.saveFile` 存储，并记录 `previews` 元数据（只有计数到达模型；摘要从不进入模型可见内容）。
