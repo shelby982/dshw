@@ -33,7 +33,7 @@ export const Config: z<Config> = z.object({
 })
 
 /** Services required before the tool registers. */
-export const inject = ['tools'] as const
+export const inject = ['tools', 'fs', 'fileAttachments'] as const
 
 /** Stable Cordis plugin name. */
 export const name = 'tool-preview'
