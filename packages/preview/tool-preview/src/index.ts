@@ -16,8 +16,9 @@ import { defineTool } from '@deepseek-ai/dsh-tools'
 import type { ToolExecution } from '@deepseek-ai/dsh-tools'
 import { previewKindOf } from '@deepseek-ai/dsh-preview'
 import type { JsonValue } from '@deepseek-ai/dsh-util-values'
-import type {} from '@deepseek-ai/dsh-attachment'
+import type { FileAttachmentRef } from '@deepseek-ai/dsh-attachment'
 import type {} from '@deepseek-ai/dsh-fs'
+import { convertPptxToPng, PPTX_MEDIA_TYPE } from './convert.ts'
 
 /** Default cap on bytes read for one produced file. */
 export const DEFAULT_MAX_PREVIEW_BYTES = 20 * 1024 * 1024
@@ -82,6 +83,37 @@ function previewRecord(ref: {
   }
 }
 
+/**
+ * Register one produced file as a preview, converting a PPTX to a PNG thumbnail
+ * when the host conversion stack is available (degrading to the original file
+ * as a download link).
+ * @param ctx - plugin context carrying the file-attachment service.
+ * @param file - the workspace-relative produced-file path.
+ * @param data - the file bytes read from the workspace.
+ * @param signal - caller lifetime; abort kills the conversion.
+ * @returns the durable attachment reference registered for preview.
+ */
+/** Exported for tests; the tool's execute registers each file through this. */
+export async function registerPreview(
+  ctx: Context,
+  file: string,
+  data: Uint8Array,
+  signal: AbortSignal | undefined,
+): Promise<FileAttachmentRef> {
+  const mediaType = mediaTypeOf(file)
+  if (mediaType === PPTX_MEDIA_TYPE) {
+    const png = await convertPptxToPng(data, signal)
+    if (png !== undefined) {
+      return ctx.fileAttachments.saveFile({
+        data: png,
+        mediaType: 'image/png',
+        name: `${basename(file, '.pptx')}.png`,
+      })
+    }
+  }
+  return ctx.fileAttachments.saveFile({ data, mediaType, name: basename(file) })
+}
+
 /** Format the model-facing confirmation text. */
 function formatPreviewed(count: number): string {
   return count === 1
@@ -128,11 +160,7 @@ export function apply(ctx: Context, config: Config): void {
       for (const file of args.files) {
         const target = await ctx.fs.resolve(file, { ...cwd !== undefined ? { cwd } : {}, signal: exec.signal })
         const data = await ctx.fs.readBytes(target, exec.signal, config.maxPreviewBytes)
-        const ref = await ctx.fileAttachments.saveFile({
-          data,
-          mediaType: mediaTypeOf(file),
-          name: basename(file),
-        })
+        const ref = await registerPreview(ctx, file, data, exec.signal)
         previews.push(previewRecord(ref, previewKindOf(ref.mediaType)))
       }
       return { previewed: previews.length, previews }
