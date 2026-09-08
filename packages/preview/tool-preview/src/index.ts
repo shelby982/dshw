@@ -14,7 +14,7 @@ import { Context } from '@deepseek-ai/cordis'
 import z from '@deepseek-ai/schemastery'
 import { defineTool } from '@deepseek-ai/dsh-tools'
 import type { ToolExecution } from '@deepseek-ai/dsh-tools'
-import { previewKindOf } from '@deepseek-ai/dsh-preview'
+import { previewKindOf, mediaTypeOf } from '@deepseek-ai/dsh-preview'
 import type { JsonValue } from '@deepseek-ai/dsh-util-values'
 import type { FileAttachmentRef } from '@deepseek-ai/dsh-attachment'
 import type {} from '@deepseek-ai/dsh-fs'
@@ -38,26 +38,6 @@ export const inject = ['tools', 'fs', 'fileAttachments'] as const
 
 /** Stable Cordis plugin name. */
 export const name = 'tool-preview'
-
-/** Map a produced file's extension to the MIME type stored with its attachment. */
-export function mediaTypeOf(path: string): string {
-  const ext = path.slice(path.lastIndexOf('.')).toLowerCase()
-  switch (ext) {
-    case '.png': return 'image/png'
-    case '.jpg':
-    case '.jpeg': return 'image/jpeg'
-    case '.webp': return 'image/webp'
-    case '.gif': return 'image/gif'
-    case '.svg': return 'image/svg+xml'
-    case '.html':
-    case '.htm': return 'text/html'
-    case '.json': return 'application/json'
-    case '.txt':
-    case '.md': return 'text/plain'
-    case '.pptx': return 'application/vnd.openxmlformats-officedocument.presentationml.presentation'
-    default: return 'application/octet-stream'
-  }
-}
 
 /** The tool's executed value: out-of-band previews ride the result metadata, not the model view. */
 interface PreviewValue {

@@ -54,6 +54,26 @@ export function previewsFromMeta(meta: unknown): ProducedPreview[] | undefined {
   return out
 }
 
+/** Infer the MIME type of a produced file from its path extension. */
+export function mediaTypeOf(path: string): string {
+  const ext = path.slice(path.lastIndexOf('.')).toLowerCase()
+  switch (ext) {
+    case '.png': return 'image/png'
+    case '.jpg':
+    case '.jpeg': return 'image/jpeg'
+    case '.webp': return 'image/webp'
+    case '.gif': return 'image/gif'
+    case '.svg': return 'image/svg+xml'
+    case '.html':
+    case '.htm': return 'text/html'
+    case '.json': return 'application/json'
+    case '.txt':
+    case '.md': return 'text/plain'
+    case '.pptx': return 'application/vnd.openxmlformats-officedocument.presentationml.presentation'
+    default: return 'application/octet-stream'
+  }
+}
+
 /**
  * Infer the rendering hint for one produced file from its MIME type.
  * @param mediaType - the verified MIME type of the produced file.

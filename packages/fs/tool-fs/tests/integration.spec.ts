@@ -10,6 +10,8 @@ import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { Context } from '@deepseek-ai/cordis'
+import { AttachmentId } from '@deepseek-ai/dsh-attachment'
+import type { FileAttachmentRef } from '@deepseek-ai/dsh-attachment'
 import { ToolCallId } from '@deepseek-ai/dsh-llm'
 import SystemPrompt from '@deepseek-ai/dsh-system-prompt'
 import ToolRuntime, { TOOL_ABORTED_BEFORE_DISPATCH } from '@deepseek-ai/dsh-tools'
@@ -511,5 +513,40 @@ describe('signal, concurrency, and the fs/observed contract', () => {
     const result = await callOwned('write', { file_path: 'w.txt', content: 'durable' })
     expect(result.isError).toBe(true)
     expect(await readFile(join(dir, 'w.txt'), 'utf8')).toBe('durable')
+  })
+})
+
+// --------------------------------------------------------------------------
+// AUTO-REGISTRATION: with the file-attachment service mounted, a successful
+// write/edit folds the produced file into the result's `previews` meta.
+// --------------------------------------------------------------------------
+describe('auto-registration (with fileAttachments)', () => {
+  beforeEach(async () => {
+    dir = await mkdtemp(join(tmpdir(), 'dsh-tool-fs-preview-'))
+    ctx = new Context()
+    await ctx.plugin(SystemPrompt)
+    await ctx.plugin(ToolRuntime)
+    await ctx.plugin(LocalFileSystem, { cwd: dir })
+    await ctx.plugin(FsPolicy)
+    ctx.provide('fileAttachments', {
+      saveFile: vi.fn<(i: { data: Uint8Array; mediaType: string; name: string }) => Promise<FileAttachmentRef>>()
+        .mockResolvedValue({ attachmentId: AttachmentId('sha256:mock'), mediaType: 'text/html', bytes: 1, name: 'p.html' }),
+    } as never)
+    fiber = await ctx.plugin(ToolFs)
+  })
+
+  it('folds a written file into the result meta previews', async () => {
+    const result = await call('write', { file_path: 'p.html', content: '<h1>hi</h1>' })
+    expect(Array.isArray((result as unknown as { meta: { previews: unknown[] } }).meta?.previews)).toBe(true)
+    const preview = ((result as unknown as { meta: { previews: { kind: string }[] } }).meta?.previews?.[0])
+    expect(preview?.kind).toBe('html')
+  })
+
+  it('folds an edited file into the result meta previews', async () => {
+    const write = await call('write', { file_path: 'e.html', content: '<h1>a</h1>' })
+    expect(write).toBeDefined()
+    const edit = await call('edit', { file_path: 'e.html', old_string: 'a', new_string: 'b' })
+    const preview = ((edit as unknown as { meta: { previews: { kind: string }[] } }).meta?.previews?.[0])
+    expect(preview?.kind).toBe('html')
   })
 })
