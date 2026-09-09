@@ -246,6 +246,24 @@ describe('produced-preview Turn data', () => {
     expect(previewsOf(value)?.previews ?? []).toEqual([])
   })
 
+  it('does not publish turn data for a turn whose start is outside the replay window', () => {
+    // Known defect: a reload window that begins mid-Turn has no turn/start for
+    // that turn, so previewDefinition's update context is created but never
+    // published as a timeline turn — the preview row is lost. Content still
+    // renders because messages project from content, independent of the turn
+    // boundary. Fix should make previews survive a mid-Turn window; until then
+    // this records the lost behavior.
+    const value = assembler([
+      at(3, 'turn/start', { turn: 2 }),
+      result(2, 'a', { previews: [PREVIEW('a', 'image', 'a.png')] }, false, 1),
+      result(4, 'b', { previews: [PREVIEW('c', 'json')] }, false, 2),
+    ])
+    // Turn 1 (no start in window) never becomes a timeline turn, so its preview
+    // is absent; turn 2 (start present) folds correctly.
+    expect(previewsOf(value, 1)?.previews ?? []).toEqual([])
+    expect(previewsOf(value, 2)?.previews).toEqual([PREVIEW('c', 'json')])
+  })
+
   it('rejects an invalid start match and preserves state for an unrelated update', () => {
     const startMatch = matched(at(1, 'turn/start', { turn: 1 }), 'start')
     const emptyContext: Parameters<typeof previewDefinition.start>[0] = {

@@ -337,6 +337,12 @@ function paginate(
     }
     if (count >= maxMessages) {
       cut = SessionLogOffset(groupStart)
+      // Align the window start to the nearest turn/start at or before cut, so a
+      // mid-Turn cut never opens a window without that turn's turn/start — the
+      // turn-scoped nodes (e.g. ui-preview) need it to publish their turn data.
+      for (let i = cut; i >= 0; i--) {
+        if (events[i]?.type === 'turn/start') { cut = SessionLogOffset(i); break }
+      }
       break
     }
   }
