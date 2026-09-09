@@ -1,7 +1,7 @@
 /** Browser-safe request, result, and lifecycle vocabulary for the Session Remote service. */
 
 import type {
-  AttachmentIdType, ImageAttachmentLimits, ImageAttachmentRef, ImageMediaType,
+  AttachmentIdType, FileAttachmentRef, ImageAttachmentLimits, ImageAttachmentRef, ImageMediaType,
 } from '@deepseek-ai/dsh-attachment'
 import type { Branded } from '@deepseek-ai/dsh-brand'
 import type { MessageId } from '@deepseek-ai/dsh-llm/brand'
@@ -322,6 +322,18 @@ export interface SessionAttachmentRequest {
 /** Durable image read response value. */
 export interface SessionAttachmentValue {
   readonly attachment: ImageAttachmentRef
+  readonly data: string
+}
+
+/** Durable produced-file read request. */
+export interface SessionPreviewFileRequest {
+  readonly sessionId: SessionId
+  readonly attachmentId: AttachmentIdType
+}
+
+/** Durable produced-file read response value. */
+export interface SessionPreviewFileValue {
+  readonly attachment: FileAttachmentRef
   readonly data: string
 }
 

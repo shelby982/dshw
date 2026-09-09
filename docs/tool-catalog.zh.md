@@ -44,6 +44,7 @@
 | `@deepseek-ai/dsh-tool-todo` | `todo_write` | `ctx.tools`、`owning Agent session` | `tool/call`、`todo/write`、`tool/result` | - | todo_write 是会话所有的状态；UI 将最新的 todo/write 事件渲染为检查清单。`allowParallelInProgress` 是没有默认值的必填项，因此本目录明确选择 `true`，对应描述允许同时存在多个 `in_progress` 项。选择 `false` 的部署会获得同一工具，但描述会要求只能有 1 个活动任务。 |
 | `@deepseek-ai/dsh-tool-workflow` | `workflow` | `ctx.tools`、`ctx.workflowEngine`、`ctx.systemPrompt`、`a calling Agent (exec.agent parents the script children)` | `tool/call`、`tool/result` | - | - |
 | `@deepseek-ai/dsh-tool-web` | `web_fetch`、`web_search` | `ctx.tools`、`ctx.web`、`ctx.systemPrompt` | `tool/call`、`tool/result` | - | web_search 和 web_fetch 将提供方选择置于 ctx.web 之后，使模型可见 schema 在更换后端时保持稳定。 |
+| `@deepseek-ai/dsh-tool-preview` | `preview_files` | `ctx.tools`、`ctx.fs`、`ctx.fileAttachments`、`a produced file on disk (preview_files execution)` | `tool/call`、`durable file attachment (ctx.fileAttachments.saveFile)`、`tool/result` | - | preview_files 将产物文件（图片、HTML、幻灯片、文档）登记为可预览的 Web 附件；当 LibreOffice+poppler 转换栈存在时，产物 PPTX 会转为 PNG 缩略图，否则降级为原始 PPTX。 |
 
 <a id="deepseek-aidsh-tool-ask-user"></a>
 
@@ -2231,3 +2232,34 @@ todo_write 是会话所有的状态；UI 将最新的 todo/write 事件渲染为
 来源：[`packages/web/tool-web/src/index.ts`](../packages/web/tool-web/src/index.ts)
 
 web_search 和 web_fetch 将提供方选择置于 ctx.web 之后，使模型可见 schema 在更换后端时保持稳定。
+
+<a id="deepseek-aidsh-tool-preview"></a>
+
+## `@deepseek-ai/dsh-tool-preview`
+
+### `preview_files`
+
+登记产物文件（图片、HTML、幻灯片、文档），让用户能在 Web GUI 中预览其渲染后的内容。
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "files": {
+      "type": "array",
+      "description": "Produced file paths to make previewable.",
+      "items": {
+        "type": "string",
+        "description": "Workspace-relative path of a produced file to register for preview."
+      }
+    }
+  },
+  "required": [
+    "files"
+  ]
+}
+```
+
+来源：[`packages/preview/tool-preview/src/index.ts`](../packages/preview/tool-preview/src/index.ts)
+
+preview_files 将产物文件（图片、HTML、幻灯片、文档）登记为可预览的 Web 附件；当 LibreOffice+poppler 转换栈存在时，产物 PPTX 会转为 PNG 缩略图，否则降级为原始 PPTX。

@@ -14,6 +14,7 @@ import { computeHunkDiffs, diffsFromMeta } from './diff.ts'
 import { remediateFsError } from './error.ts'
 import { sessionResolveOptions } from './session-cwd.ts'
 import type { FsSandboxController } from './sandbox.ts'
+import { registerProducedPreview } from './preview.ts'
 
 /**
  * Validate value constraints the schema DSL can't express: only a non-blank
@@ -88,6 +89,7 @@ export function applyWriteTool(ctx: Context, sandbox: FsSandboxController): void
             ],
           },
           after: { type: 'string', required: true },
+          previews: { type: 'array', items: { type: 'object', additionalProperties: true } },
         },
       },
       render: (_args, value) => [{ type: 'text', text: formatWriteOutput(value.path, value) }],
@@ -96,6 +98,7 @@ export function applyWriteTool(ctx: Context, sandbox: FsSandboxController): void
           ? []
           : computeHunkDiffs(args.file_path, value.before, value.after)
             .map(({ path, oldText, newText }) => ({ path, oldText, newText })),
+        ...Array.isArray(value.previews) ? { previews: value.previews } : {},
       }),
     },
     async execute(args: WriteToolArgs, exec) {
@@ -118,11 +121,13 @@ export function applyWriteTool(ctx: Context, sandbox: FsSandboxController): void
         throw remediateFsError(sandbox.mapError(error, sandboxPolicy))
       }
       ctx.emit('fs/observed', target, { kind: 'present', version: outcome.version }, exec)
+      const preview = await registerProducedPreview(ctx, input.filePath, Buffer.from(input.content))
       return {
         path: target.displayPath,
         operation: outcome.operation,
         before: outcome.before,
         after: outcome.after,
+        ...preview !== undefined ? { previews: [preview] } : {},
       }
     },
     // Pure display: a diff card. A call-time presenter has no access to prior

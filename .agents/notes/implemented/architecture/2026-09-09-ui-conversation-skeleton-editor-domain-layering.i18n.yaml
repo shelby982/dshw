@@ -1,0 +1,6 @@
+# Bilingual-pair consistency record (docs/i18n/README.md): the git blob hash of each
+# side as of the last confirmed-consistent state. Both languages carry equal authority;
+# after editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write .agents/notes/implemented/architecture/2026-09-09-ui-conversation-skeleton-editor-domain-layering.md
+2026-09-09-ui-conversation-skeleton-editor-domain-layering.md: 5270ec3185f544d898a89318fdb09df83bfe5c9c
+2026-09-09-ui-conversation-skeleton-editor-domain-layering.zh.md: 7cbc8bb62256cba82281e6929757ccb1631b6d1a

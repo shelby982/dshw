@@ -118,6 +118,17 @@
     - id: attachment-local
       name: '@deepseek-ai/dsh-attachment-local'
 
+    # Produced-file attachment storage (ctx.fileAttachments): content-addressed
+    # durable storage for produced files registered as previewable. Kept a
+    # separate row so a composition can enable it without the image pipeline.
+    - id: file-attachments
+      name: '@deepseek-ai/dsh-attachment-local/file-attachments'
+
+    # Produced-file preview registration tool: lets the model register produced
+    # files as previewable Web attachments (recording `previews` metadata).
+    - id: tool-preview
+      name: '@deepseek-ai/dsh-tool-preview'
+
     # Full-text session search is opt-in. `openAt: never` keeps
     # ctx.sessionQuery mounted — exact reads, titles, and lineage traces
     # (session export, subagent-fork Workspace inheritance) stay available —

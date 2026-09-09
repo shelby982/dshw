@@ -9,9 +9,12 @@ import {
   AttachmentId,
 } from '@deepseek-ai/dsh-attachment'
 import type {
+  FileAttachmentRef,
   ImageAttachmentLimits,
   ImageAttachmentRef,
+  SaveFileAttachment,
   SaveImageAttachment,
+  StoredFileAttachment,
   StoredImageAttachment,
 } from '@deepseek-ai/dsh-attachment'
 import { normalizeImage } from './normalization.ts'
@@ -37,7 +40,12 @@ function displayName(value: string | undefined): string | undefined {
 }
 
 function ensureReference(ref: ImageAttachmentRef): string {
-  const match = ID_PATTERN.exec(String(ref.attachmentId))
+  return objectSha256(ref.attachmentId)
+}
+
+/** Extract the verified content hash from a durable attachment id. */
+function objectSha256(attachmentId: AttachmentId): string {
+  const match = ID_PATTERN.exec(String(attachmentId))
   if (match?.[1] === undefined) throw new AttachmentError('Attachment reference is invalid.', 'INVALID_ATTACHMENT_REF')
   return match[1]
 }
@@ -183,20 +191,12 @@ async function ensureDurableHome(path: string): Promise<string> {
 }
 
 /**
- * Publish one already verified normalized image below a versioned attachment root.
+ * Publish one already verified content-addressed byte object below a versioned attachment root.
  * @param root - absolute `DSH_HOME/attachments/v1` root.
- * @param prepared - deterministic normalized bytes and reference.
- * @returns durable content-addressed normalized image reference.
+ * @param sha256 - content hash used for the object bucket and filename.
+ * @param data - bytes matching {@link sha256}.
  */
-export async function commitPreparedImageFile(
-  root: string,
-  prepared: PreparedImageFile,
-): Promise<ImageAttachmentRef> {
-  const normalized = prepared.data
-  const sha256 = ensureReference(prepared.ref)
-  if (digest(normalized) !== sha256 || normalized.byteLength !== prepared.ref.bytes) {
-    throw new AttachmentError('Prepared attachment bytes do not match their reference.', 'ATTACHMENT_CORRUPT')
-  }
+async function publishObject(root: string, sha256: string, data: Uint8Array): Promise<void> {
   const bucket = join(root, 'objects', sha256.slice(0, 2))
   const staging = join(root, 'tmp')
   // Establish DSH_HOME itself against the filesystem root once per process.
@@ -206,11 +206,11 @@ export async function commitPreparedImageFile(
   await ensureDurableDirectory(bucket, boundary)
   await ensureDurableDirectory(staging, boundary)
   const temporary = join(staging, randomUUID())
-  const target = normalizedImagePath(root, prepared.ref)
+  const target = join(root, 'objects', sha256.slice(0, 2), sha256)
   let handle
   try {
     handle = await open(temporary, constants.O_CREAT | constants.O_EXCL | constants.O_WRONLY, 0o600)
-    await handle.writeFile(normalized)
+    await handle.writeFile(data)
     await handle.sync()
     await handle.close()
     handle = undefined
@@ -248,8 +248,26 @@ export async function commitPreparedImageFile(
       },
     )
     if (error instanceof AttachmentError) throw error
-    throw new AttachmentError('Unable to persist image attachment.', 'ATTACHMENT_WRITE_FAILED', { cause: error })
+    throw new AttachmentError('Unable to persist attachment.', 'ATTACHMENT_WRITE_FAILED', { cause: error })
   }
+}
+
+/**
+ * Publish one already verified normalized image below a versioned attachment root.
+ * @param root - absolute `DSH_HOME/attachments/v1` root.
+ * @param prepared - deterministic normalized bytes and reference.
+ * @returns durable content-addressed normalized image reference.
+ */
+export async function commitPreparedImageFile(
+  root: string,
+  prepared: PreparedImageFile,
+): Promise<ImageAttachmentRef> {
+  const normalized = prepared.data
+  const sha256 = ensureReference(prepared.ref)
+  if (digest(normalized) !== sha256 || normalized.byteLength !== prepared.ref.bytes) {
+    throw new AttachmentError('Prepared attachment bytes do not match their reference.', 'ATTACHMENT_CORRUPT')
+  }
+  await publishObject(root, sha256, normalized)
   return prepared.ref
 }
 
@@ -271,6 +289,29 @@ export async function saveImageFile(
 }
 
 /**
+ * Read and verify one content-addressed byte object.
+ * @param root - absolute `DSH_HOME/attachments/v1` root.
+ * @param sha256 - content hash to read back.
+ * @param signal - optional cancellation for filesystem work.
+ * @returns verified bytes.
+ * @throws the signal reason when aborted, or an AttachmentError when verification fails.
+ */
+async function readObject(root: string, sha256: string, signal?: AbortSignal): Promise<Uint8Array> {
+  signal?.throwIfAborted()
+  let data: Uint8Array
+  try {
+    data = new Uint8Array(await readFile(join(root, 'objects', sha256.slice(0, 2), sha256), { signal }))
+  } catch (error) {
+    signal?.throwIfAborted()
+    if (error instanceof Error && 'code' in error && error.code === 'ENOENT') throw new AttachmentError('Attachment object is missing.', 'ATTACHMENT_NOT_FOUND')
+    throw new AttachmentError('Unable to read attachment.', 'ATTACHMENT_READ_FAILED', { cause: error })
+  }
+  signal?.throwIfAborted()
+  if (digest(data) !== sha256) throw new AttachmentError('Stored attachment failed integrity verification.', 'ATTACHMENT_CORRUPT')
+  return data
+}
+
+/**
  * Read and verify one content-addressed image.
  * @param root - absolute `DSH_HOME/attachments/v1` root.
  * @param ref - reference recorded in the session log.
@@ -285,16 +326,8 @@ export async function readImageFile(
 ): Promise<StoredImageAttachment> {
   signal?.throwIfAborted()
   const sha256 = ensureReference(ref)
-  let data: Uint8Array
-  try {
-    data = new Uint8Array(await readFile(normalizedImagePath(root, ref), { signal }))
-  } catch (error) {
-    signal?.throwIfAborted()
-    if (error instanceof Error && 'code' in error && error.code === 'ENOENT') throw new AttachmentError('Attachment object is missing.', 'ATTACHMENT_NOT_FOUND')
-    throw new AttachmentError('Unable to read image attachment.', 'ATTACHMENT_READ_FAILED', { cause: error })
-  }
+  const data = await readObject(root, sha256, signal)
   signal?.throwIfAborted()
-  if (digest(data) !== sha256) throw new AttachmentError('Stored attachment failed integrity verification.', 'ATTACHMENT_CORRUPT')
   // The digest proves these are the exact bytes admission fully decoded, so
   // the read path only re-derives the header fields (no raster decode, no
   // per-request pixel amplification on history replay).
@@ -302,6 +335,90 @@ export async function readImageFile(
   signal?.throwIfAborted()
   if (metadata.mediaType !== ref.mediaType || data.byteLength !== ref.bytes
     || metadata.width !== ref.width || metadata.height !== ref.height) {
+    throw new AttachmentError('Stored attachment metadata does not match its reference.', 'ATTACHMENT_CORRUPT')
+  }
+  return { ref, data }
+}
+
+/** Fully prepared general-file object, verified before any member is persisted. */
+export interface PreparedFileObject {
+  /** Deterministic bytes whose digest is {@link ref.attachmentId}. */
+  data: Uint8Array
+  /** Durable reference describing {@link data}. */
+  ref: FileAttachmentRef
+}
+
+/**
+ * Derive a general-file reference and bytes without touching storage.
+ * @param input - submitted bytes and known MIME type.
+ * @returns immutable reference facts beside bytes ready for atomic publication.
+ */
+export function prepareFileObject(
+  input: SaveFileAttachment,
+): PreparedFileObject {
+  const data = input.data
+  const sha256 = digest(data)
+  const name = displayName(input.name)
+  return {
+    data,
+    ref: {
+      attachmentId: AttachmentId(`sha256:${sha256}`),
+      mediaType: input.mediaType,
+      bytes: data.byteLength,
+      ...(name !== undefined ? { name } : {}),
+    },
+  }
+}
+
+/**
+ * Derive the absolute immutable-object path for one general-file attachment.
+ * @param root - absolute `DSH_HOME/attachments/v1` root.
+ * @param ref - durable file attachment reference.
+ * @returns provider-local path without reading the object.
+ */
+export function fileObjectPath(root: string, ref: FileAttachmentRef): string {
+  const sha256 = objectSha256(ref.attachmentId)
+  return join(root, 'objects', sha256.slice(0, 2), sha256)
+}
+
+/**
+ * Publish one already verified general-file byte object.
+ * @param root - absolute `DSH_HOME/attachments/v1` root.
+ * @param ref - durable file attachment reference describing {@link data}.
+ * @param data - bytes matching the reference.
+ * @returns the durable content-addressed file reference.
+ */
+export async function commitFileObject(
+  root: string,
+  ref: FileAttachmentRef,
+  data: Uint8Array,
+): Promise<FileAttachmentRef> {
+  const sha256 = objectSha256(ref.attachmentId)
+  if (digest(data) !== sha256 || data.byteLength !== ref.bytes) {
+    throw new AttachmentError('Prepared attachment bytes do not match their reference.', 'ATTACHMENT_CORRUPT')
+  }
+  await publishObject(root, sha256, data)
+  return ref
+}
+
+/**
+ * Read and verify one content-addressed general-file.
+ * @param root - absolute `DSH_HOME/attachments/v1` root.
+ * @param ref - reference recorded in the session log.
+ * @param signal - optional cancellation for filesystem work.
+ * @returns verified bytes and reference.
+ * @throws the signal reason when aborted, or an AttachmentError when verification fails.
+ */
+export async function readFileObject(
+  root: string,
+  ref: FileAttachmentRef,
+  signal?: AbortSignal,
+): Promise<StoredFileAttachment> {
+  signal?.throwIfAborted()
+  const sha256 = objectSha256(ref.attachmentId)
+  const data = await readObject(root, sha256, signal)
+  signal?.throwIfAborted()
+  if (data.byteLength !== ref.bytes) {
     throw new AttachmentError('Stored attachment metadata does not match its reference.', 'ATTACHMENT_CORRUPT')
   }
   return { ref, data }

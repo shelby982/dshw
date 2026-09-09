@@ -3,25 +3,28 @@
 import { join, resolve } from 'node:path'
 import { Context } from '@deepseek-ai/cordis'
 import z from '@deepseek-ai/schemastery'
-import { AttachmentStore } from '@deepseek-ai/dsh-attachment'
+import { AttachmentStore, FileAttachmentStore } from '@deepseek-ai/dsh-attachment'
 import type {
+  FileAttachmentRef,
   ImageAttachmentLimits,
   ImageAttachmentRef,
   ImageRequestPolicy,
   RequestImageAttachment,
+  SaveFileAttachment,
   SaveImageAttachment,
+  StoredFileAttachment,
   StoredImageAttachment,
 } from '@deepseek-ai/dsh-attachment'
 import { resolveDshHome } from '@deepseek-ai/dsh-home-paths'
 import type { NormalizationPolicy } from './normalization.ts'
 import { CompressionLimiter } from './compression-limiter.ts'
-import { commitPreparedImageFile, normalizedImagePath, prepareImageFile, readImageFile, validateImageFile } from './store.ts'
+import { commitFileObject, commitPreparedImageFile, fileObjectPath, normalizedImagePath, prepareFileObject, prepareImageFile, readFileObject, readImageFile, validateImageFile } from './store.ts'
 import { readRequestImageFile, requestImageVariantId } from './request-image.ts'
 
 export { canPassThroughNormalization, normalizeImage } from './normalization.ts'
 export type { NormalizedImage, NormalizationPolicy } from './normalization.ts'
-export { commitPreparedImageFile, prepareImageFile, readImageFile, saveImageFile, validateImageFile } from './store.ts'
-export type { PreparedImageFile } from './store.ts'
+export { commitFileObject, commitPreparedImageFile, fileObjectPath, prepareFileObject, prepareImageFile, readFileObject, readImageFile, saveImageFile, validateImageFile } from './store.ts'
+export type { PreparedFileObject, PreparedImageFile } from './store.ts'
 export { readRequestImageFile, requestImageVariantId } from './request-image.ts'
 
 /** Default maximum encoded bytes for one submitted image; oversized sources are refused, not shrunk. */
@@ -263,6 +266,30 @@ export class LocalAttachmentStore extends AttachmentStore {
     return operation.wait(signal)
   }
 
+}
+
+/** Persistent content-addressed local general-file attachment store. */
+export class LocalFileAttachmentStore extends FileAttachmentStore {
+  /** Absolute versioned storage root. */
+  readonly root: string
+
+  constructor(ctx: Context, config: Config = {}) {
+    super(ctx)
+    this.root = resolve(join(resolveDshHome(config.dshHome), 'attachments', 'v1'))
+  }
+
+  async saveFile(input: SaveFileAttachment): Promise<FileAttachmentRef> {
+    const prepared = prepareFileObject(input)
+    return commitFileObject(this.root, prepared.ref, prepared.data)
+  }
+
+  async readFile(ref: FileAttachmentRef, signal?: AbortSignal): Promise<StoredFileAttachment> {
+    return readFileObject(this.root, ref, signal)
+  }
+
+  override fileHostPath(ref: FileAttachmentRef): string {
+    return fileObjectPath(this.root, ref)
+  }
 }
 
 export default LocalAttachmentStore

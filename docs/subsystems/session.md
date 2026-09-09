@@ -765,6 +765,13 @@ inspect( sessionId: SessionId, signal?: AbortSignal, ): Promise<SessionInspectio
 @Remote('attachment') attachment(request: SessionAttachmentRequest): Promise<SessionAttachmentValue>
 
 /**
+ * Read one produced file proven reachable from the addressed Session log.
+ * @param request - Session and file attachment identities used for authorization.
+ * @returns the durable file attachment reference and base64-encoded bytes.
+ */
+@Remote('previewFile') previewFile(request: SessionPreviewFileRequest): Promise<SessionPreviewFileValue>
+
+/**
  * Mutate one still-pending queue occurrence on a live Agent.
  * @param request - Session, queue item, and requested mutation.
  * @returns acknowledgement that the queue mutation was applied.

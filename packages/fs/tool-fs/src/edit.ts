@@ -13,6 +13,7 @@ import { computeHunkDiffs, diffsFromMeta } from './diff.ts'
 import { remediateFsError } from './error.ts'
 import { sessionResolveOptions } from './session-cwd.ts'
 import type { FsSandboxController } from './sandbox.ts'
+import { registerProducedPreview } from './preview.ts'
 
 /** Validated `edit` arguments after defaulting. */
 interface EditInput {
@@ -97,6 +98,7 @@ export function applyEditTool(ctx: Context, sandbox: FsSandboxController): void 
           path: { type: 'string', required: true },
           before: { type: 'string', required: true },
           after: { type: 'string', required: true },
+          previews: { type: 'array', items: { type: 'object', additionalProperties: true } },
         },
       },
       render: (args, value) => [{
@@ -106,6 +108,7 @@ export function applyEditTool(ctx: Context, sandbox: FsSandboxController): void 
       presentationMeta: (args, value) => ({
         diffs: computeHunkDiffs(args.file_path, value.before, value.after)
           .map(({ path, oldText, newText }) => ({ path, oldText, newText })),
+        ...Array.isArray(value.previews) ? { previews: value.previews } : {},
       }),
     },
     async execute(args: EditToolArgs, exec) {
@@ -137,10 +140,12 @@ export function applyEditTool(ctx: Context, sandbox: FsSandboxController): void 
         throw remediateFsError(sandbox.mapError(error, sandboxPolicy))
       }
       ctx.emit('fs/observed', target, { kind: 'present', version: outcome.version }, exec)
+      const preview = await registerProducedPreview(ctx, input.filePath, Buffer.from(outcome.after))
       return {
         path: target.displayPath,
         before: outcome.before,
         after: outcome.after,
+        ...preview !== undefined ? { previews: [preview] } : {},
       }
     },
     // Pure display: a diff card of the literal replacement (old_string → new_string), derived

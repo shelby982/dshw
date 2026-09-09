@@ -5,7 +5,8 @@ import type { Context } from '@deepseek-ai/cordis'
 import { brandString } from '@deepseek-ai/dsh-brand'
 import type { Agent, ModelSelection as AgentModelSelection } from '@deepseek-ai/dsh-agent'
 import { AttachmentError, admitPromptContent } from '@deepseek-ai/dsh-attachment'
-import type { ImageAttachmentRef } from '@deepseek-ai/dsh-attachment'
+import type { FileAttachmentRef, ImageAttachmentRef } from '@deepseek-ai/dsh-attachment'
+import { previewsFromMeta } from '@deepseek-ai/dsh-preview'
 import {
   ReasoningEffortId, createUserMessage, freezeMessage,
 } from '@deepseek-ai/dsh-llm'
@@ -36,6 +37,8 @@ import type {
   SessionCreateValue,
   SessionForkRequest,
   SessionForkValue,
+  SessionPreviewFileRequest,
+  SessionPreviewFileValue,
   SessionPromptRequest,
   SessionPromptValue,
   SessionRenameRequest,
@@ -382,6 +385,47 @@ export class SessionCommandController {
   }
 
   /**
+   * Read one produced file proven reachable from the addressed Session log.
+   * @param request - Session and file attachment identities used for authorization.
+   * @returns the durable file attachment reference and base64-encoded bytes.
+   */
+  async previewFile(request: SessionPreviewFileRequest): Promise<SessionPreviewFileValue> {
+    let source: SessionReadState
+    try {
+      source = await this.readSessionState(request.sessionId)
+    } catch (error) {
+      if (error instanceof ApiSessionNotFound) {
+        throw new RemoteError('session/not-found', error.message, { sessionId: request.sessionId })
+      }
+      throw new RemoteError(
+        'gateway/internal',
+        `file preview authorization unavailable for session "${request.sessionId}": ${String(error)}`,
+        {},
+      )
+    }
+    const ref = referencedFile(source.events, String(request.attachmentId))
+    if (ref === undefined) {
+      throw new RemoteError(
+        'session/attachment-invalid',
+        'Produced file is not referenced by this session.',
+        { reason: 'ATTACHMENT_NOT_REFERENCED' },
+      )
+    }
+    try {
+      const stored = await this.ctx.fileAttachments.readFile(ref)
+      return {
+        attachment: stored.ref,
+        data: Buffer.from(stored.data).toString('base64'),
+      }
+    } catch (error) {
+      if (error instanceof AttachmentError) {
+        throw new RemoteError('session/attachment-invalid', error.message, { reason: error.code })
+      }
+      throw new RemoteError('gateway/internal', 'Unable to read produced file.', {})
+    }
+  }
+
+  /**
    * Mutate one still-pending queue occurrence without resuming a cold Agent.
    * @param request - Session, queue item, and requested mutation.
    * @returns acknowledgement that the queue mutation was applied.
@@ -547,6 +591,23 @@ function referencedImage(
   for (const event of events) {
     const found = imageInEvent(event, ref => String(ref.attachmentId) === attachmentId)
     if (found !== undefined) return found
+  }
+  return undefined
+}
+
+/** Find a produced file reference recorded in any tool result's private preview metadata. */
+function referencedFile(
+  events: readonly SessionEvent[],
+  attachmentId: string,
+): FileAttachmentRef | undefined {
+  for (const event of events) {
+    if (event.type !== 'tool/result') continue
+    const meta = (event.data as { readonly meta?: unknown }).meta
+    const previews = previewsFromMeta(meta)
+    if (previews === undefined) continue
+    for (const preview of previews) {
+      if (String(preview.attachment.attachmentId) === attachmentId) return preview.attachment
+    }
   }
   return undefined
 }

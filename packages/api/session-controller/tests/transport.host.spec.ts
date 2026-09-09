@@ -714,13 +714,11 @@ describe('SessionHistoryController', () => {
     const page = await transport.page({
       address: { kind: 'session', sessionId: session.id }, throughSeq: replacement.seq, maxMessages: 2,
     }, signal())
+    // The window is turn-aligned: it starts at this turn's turn/start (seq 0), so
+    // it is the complete turn and no older history remains to page.
     expect(page.records.map(entry => entry.event.seq))
-      .toEqual([3, 4, 5, replacement.seq])
-    expect(page.hasMore).toBe(true)
-    const before = await transport.page({
-      address: { kind: 'session', sessionId: session.id }, throughSeq: replacement.seq, beforeSeq: 3, maxMessages: 1,
-    }, signal())
-    expect(before.records.map(entry => entry.event.seq)).toEqual([2])
+      .toEqual([0, 1, 2, 3, 4, 5, replacement.seq])
+    expect(page.hasMore).toBe(false)
   })
 
   it('keeps cited source events in the page that owns their appended message', async () => {

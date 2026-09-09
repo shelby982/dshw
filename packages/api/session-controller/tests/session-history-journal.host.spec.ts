@@ -207,7 +207,7 @@ describe('Session history raw journal', () => {
     session.append('turn/start', { turn: 1 })
     const first = appendUserText(session, 'first prompt')
     appendAssistantText(session, 'first reply', 1)
-    const third = appendUserText(session, 'second prompt')
+    appendUserText(session, 'second prompt')
     appendAssistantText(session, 'second reply', 2)
     const shadowed = [...session.surface.nodes]
     const shadowedStart = shadowed[0]
@@ -243,15 +243,21 @@ describe('Session history raw journal', () => {
     // Two append-origin messages fill the page even though a replacement copy of
     // the same event type sits in the window: the copy is model-only.
     const messages = page.filter(event => event.type === 'user/message' || event.type === 'assistant/message')
-    expect(messages.map(event => event.seq)).toEqual([third.seq, third.seq + 1, third.seq + 3])
-    expect(page.some(event => event.seq === first.seq)).toBe(false)
-    expect(response.value.hasMore).toBe(true)
+    // The window is turn-aligned, so it spans the whole first turn — the first
+    // user/assistant (1,2), the second pair (3,4), and the replacement copy (6).
+    // The compaction summary (5) is a log-only record, not an append-origin message.
+    expect(messages.map(event => event.seq)).toEqual([1, 2, 3, 4, 6])
+    expect(page.some(event => event.seq === first.seq)).toBe(true)
+    expect(response.value.hasMore).toBe(false)
     // The range stays contiguous, so the checkpoint's summary record is readable on
     // the same page as the checkpoint itself.
     const summaryIndex = page.findIndex(event => event.seq === summary.seq)
     expect(summaryIndex).toBeGreaterThan(-1)
     expect(page[summaryIndex + 1]?.seq).toBe(summary.seq + 1)
-    expect(page.map(event => event.seq)).toEqual(page.map((_event, index) => third.seq + index))
+    // The range starts at this turn's turn/start (aligned, not the last message's
+    // groupStart), and stays contiguous through the replacement; the compaction
+    // summary is a log-only record and does not occupy a message slot here.
+    expect(page.map(event => event.seq)).toEqual([0, 1, 2, 3, 4, 5, 6])
   })
 
   it('paginates a message with many provenance sources without variadic argument expansion', async () => {
@@ -286,12 +292,37 @@ describe('Session history raw journal', () => {
         maxMessages: 1,
       })
       if (!response.ok) throw new Error('unreachable')
-      expect(pageEvents(response.value).map(event => event.seq)).toEqual([...sources, message.seq])
+      expect(pageEvents(response.value).map(event => event.seq)).toEqual([0, ...sources, message.seq])
       expect(response.value.records.filter(record => record.type === 'chunks')).toHaveLength(1)
-      expect(response.value.hasMore).toBe(true)
+      expect(response.value.hasMore).toBe(false)
     } finally {
       min.mockRestore()
     }
+  })
+
+  it('starts a window that would begin mid-Turn at the owning turn/start', async () => {
+    const { ctx } = await harness()
+    const remote = createSessionTestRemote(ctx, { defaultModelSelection: () => ({ provider: 'p', model: 'm' }), cwd: '/tmp' })
+    const session = ctx.sessions.create(undefined, { meta: { cwd: '/workspace' } })
+    session.append('turn/start', { turn: 1 })
+    appendUserText(session, 'one')
+    appendAssistantText(session, 'reply', 1)
+    const turnStart2 = session.append('turn/start', { turn: 2 })
+    appendUserText(session, 'two')
+    const reply2 = appendAssistantText(session, 'reply two', 2)
+    const response = await remote.page({
+      address: { kind: 'session', sessionId: session.id },
+      throughSeq: reply2.seq,
+      maxMessages: 1,
+    })
+    if (!response.ok) throw new Error('unreachable')
+    const records = pageEvents(response.value)
+    // maxMessages=1 would cut at reply2's own group in the middle of turn 2; the
+    // window is instead aligned back to turn 2's turn/start so turn-scoped nodes
+    // (e.g. ui-preview) can publish their data for that turn. Older history exists.
+    expect(records[0]?.type).toBe('turn/start')
+    expect(records[0]?.seq).toBe(turnStart2.seq)
+    expect(response.value.hasMore).toBe(true)
   })
 
   it('encodes reasoning and tool-call runs as aligned chunk events', async () => {

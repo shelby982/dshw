@@ -60,6 +60,7 @@ export const SERVICE_PAGE: Record<string, string> = {
   agents: 'core.md',
   approval: 'approval.md',
   attachments: 'attachment.md',
+  fileAttachments: 'attachment.md',
   shell: 'shell.md',
   shellEnv: 'shell.md',
   clientModules: 'client-modules.md',
@@ -306,6 +307,8 @@ export const LINK_MAP: Readonly<Record<string, string>> = {
   SessionReferenceInput: 'session-reference.md',
   SessionAttachmentRequest: 'session.md',
   SessionAttachmentValue: 'session.md',
+  SessionPreviewFileRequest: 'session.md',
+  SessionPreviewFileValue: 'session.md',
   SessionCancelRequest: 'session.md',
   SessionCancelValue: 'session.md',
   SessionControlFrame: 'session.md',
@@ -732,6 +735,9 @@ export const TYPE_LINK_EXEMPTIONS: Readonly<Record<string, string>> = {
   WorkflowAgentEndInfo: 'event-local snapshot is owned by packages/workflow/workflow/src/index.ts',
   WorkflowAgentInfo: 'event-local snapshot is owned by packages/workflow/workflow/src/index.ts',
   WorkflowResultInfo: 'event-local snapshot is owned by packages/workflow/workflow/src/index.ts',
+  FileAttachmentRef: 'durable general-file attachment reference is owned by packages/attachment/attachment/src/index.ts',
+  StoredFileAttachment: 'general-file read result is owned by packages/attachment/attachment/src/index.ts',
+  SaveFileAttachment: 'general-file save input is owned by packages/attachment/attachment/src/index.ts',
 }
 
 /** Repository data policy consumed by the Cordis catalog projector. */
