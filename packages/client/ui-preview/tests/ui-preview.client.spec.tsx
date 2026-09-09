@@ -479,7 +479,7 @@ describe('PreviewFileCache', () => {
   }
 
   it('resolves a data-URL fallback when createObjectURL is unavailable and caches by attachment', async () => {
-    const prior = URL.createObjectURL
+    const prior = URL.createObjectURL.bind(URL)
     ;(URL as unknown as { createObjectURL?: ((blob: Blob) => string) | undefined }).createObjectURL = undefined
     try {
       const { cache, setBinding } = runtime()
@@ -523,8 +523,8 @@ describe('PreviewFileCache', () => {
         readPreviewFile: () => Promise.resolve({ ok: false as const, error: new RemoteError('gateway/internal', 'gone', {}) }),
       },
     })
-    await expect(cache.resolve(SessionId('svc:s1') as SessionId, ref)).rejects.toThrow('gateway/internal: gone')
-    expect(cache.peek(SessionId('svc:s1') as SessionId, ref)).toBeUndefined()
+    await expect(cache.resolve(SessionId('svc:s1'), ref)).rejects.toThrow('gateway/internal: gone')
+    expect(cache.peek(SessionId('svc:s1'), ref)).toBeUndefined()
     cache.dispose()
   })
 
@@ -532,9 +532,9 @@ describe('PreviewFileCache', () => {
     const { cache, setBinding } = runtime()
     const ref = FILE('u', 'text/plain')
     setBinding(undefined)
-    await expect(cache.resolve(SessionId('svc:none') as SessionId, ref)).rejects.toThrow('unknown session')
+    await expect(cache.resolve(SessionId('svc:none'), ref)).rejects.toThrow('unknown session')
     cache.dispose()
-    await expect(cache.resolve(SessionId('svc:s1') as SessionId, ref)).rejects.toThrow('is disposed')
+    await expect(cache.resolve(SessionId('svc:s1'), ref)).rejects.toThrow('is disposed')
   })
 
   it('rejects a read that settles after the cache is disposed', async () => {
@@ -545,7 +545,7 @@ describe('PreviewFileCache', () => {
       ctx: new Context(),
       session: { readPreviewFile: () => new Promise((resolve) => { settle = resolve }) },
     })
-    const promise = cache.resolve(SessionId('svc:live') as SessionId, ref)
+    const promise = cache.resolve(SessionId('svc:live'), ref)
     cache.dispose()
     settle({ ok: true, value: { attachment: ref, data: new TextEncoder().encode('hi') } })
     await expect(promise).rejects.toThrow('disposed')
@@ -554,8 +554,8 @@ describe('PreviewFileCache', () => {
   it('creates a blob URL and revokes it on disposal', async () => {
     const created: string[] = []
     const revoked: string[] = []
-    const priorCreate = URL.createObjectURL
-    const priorRevoke = URL.revokeObjectURL
+    const priorCreate = URL.createObjectURL.bind(URL)
+    const priorRevoke = URL.revokeObjectURL.bind(URL)
     ;(URL as unknown as { createObjectURL: (blob: Blob) => string }).createObjectURL = () => {
       const url = `blob:mock-${created.length}`
       created.push(url)
@@ -574,7 +574,7 @@ describe('PreviewFileCache', () => {
           }),
         },
       })
-      const loaded = await cache.resolve(SessionId('svc:s1') as SessionId, ref)
+      const loaded = await cache.resolve(SessionId('svc:s1'), ref)
       expect(loaded.url).toContain('blob:mock-')
       expect(created).toHaveLength(1)
       cache.dispose()
@@ -655,6 +655,7 @@ describe('plugin registration', () => {
   })
 
   it('node half apply is a no-op', () => {
-    expect(applyHost()).toBeUndefined()
+    expect(applyHost).toBeTypeOf('function')
+    applyHost()
   })
 })

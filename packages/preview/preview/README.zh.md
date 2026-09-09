@@ -7,7 +7,7 @@ kind: "package-reference"
 
 [English](README.md) | 中文
 
-## 摘要
+## 概述
 
 本包执掌 preview seam 的 Definition 角色：描述产出文件被登记为可预览附件的持久契约。产出文件工具（一次写入、一次图像渲染、一次幻灯片构建）把输出字节存入内容寻址附件存储，再把结果的 `FileAttachmentRef` 记入工具结果的私有 `meta` 载荷。本包定义该载荷形状（`previews`）以及会话授权层与浏览器渲染器用来将它窄化出来的纯读取函数。
 
@@ -52,3 +52,13 @@ import { previewKindOf, previewsFromMeta } from '@deepseek-ai/dsh-preview'
 - 目前**尚无消费端**：没有任何产出文件工具记录 `previews`，会话授权或渲染器也没有读它。该契约是 `preview-local`、`tool-preview`、`ui-preview` 各组件构建的地基。
 - 这里不设准入限制或字节上限；生产工具控制它附加的字节。
 - PPT 转图片（`pptx` 预览）未在此实现；未来的 `preview-local` provider 拥有该能力，并在缺少转换栈时降级为"打开原文件"。
+
+<a id="dev-note"></a>
+### 开发备注
+
+<details>
+<summary>面向维护者的工作上下文 —— 点击展开</summary>
+
+无。
+
+</details>

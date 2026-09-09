@@ -33,3 +33,13 @@ The `preview/` group is the produced-file preview seam: it owns the durable cont
 
 - [Attachment subsystem](../../docs/subsystems/attachment.md) — the content-addressed object layer and general-file store the preview seam reuses.
 - [Session reference authorization](../../docs/subsystems/session.md) — how the `previewFile` RPC authorizes a recorded reference back to the session that produced it.
+
+<a id="dev-note"></a>
+### Dev Note
+
+<details>
+<summary>Working context for maintainers — click to expand</summary>
+
+None.
+
+</details>

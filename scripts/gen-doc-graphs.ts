@@ -108,6 +108,15 @@ const SERVICE_ROLES: ServiceRole[] = [
     note: 'The host commits accepted images before session events; provider adapters resolve authorized durable references into provider-native content.',
   },
   {
+    key: 'fileAttachments',
+    pkg: 'attachment',
+    title: 'Durable general-file attachment storage',
+    mode: 'seam',
+    implementations: ['attachment-local'],
+    consumers: ['api-session-controller', 'tool-preview'],
+    note: 'General-file attachments are content-addressed like images but hold produced files (not just images); the previewFile RPC authorizes a recorded reference back to the session that produced it.',
+  },
+  {
     key: 'llm',
     pkg: 'llm',
     title: 'LLM adapter registry',

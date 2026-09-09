@@ -7,11 +7,11 @@ kind: "package-reference"
 
 [English](README.md) | 中文
 
-## Summary
+## 概述
 
 本包渲染一轮结束后出现的预览行 —— 工具注册为可预览的产物文件,每个都从其持久预览字节加载并在浏览器中渲染。词汇来自产物文件工具附加在其 `tool/result` 上的 `previews` meta,而非结尾文案 —— 无论模型是否记得点名,产物文件都会被列出。随附的 Web patch 是唯一加载本包的组合;移除其 cordis.yml 条目即移除该行,并以零成本留下空 turn-tail 链。
 
-## Table of Contents
+## 目录
 
 - [Use this package](#use-this-package)
 - [Understand the implementation](#understand-the-implementation)
@@ -80,7 +80,7 @@ Node 半层为空操作。浏览器半层把 `PreviewFiles` 注册进聊天视�
 - **非可预览媒体类型回退为下载** —— 该行把 `image`/`html`/`text`/`json` 之外的类型渲染为可下载文件链接,使未知产物文件仍可达。
 
 <a id="dev-note"></a>
-### Dev Note
+### 开发备注
 
 <details>
 <summary>面向维护者的工作上下文 —— 点击展开</summary>

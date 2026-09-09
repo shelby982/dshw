@@ -67,3 +67,13 @@ The tool schema enters the prompt prefix once per session. The result-time `prev
 - No browser renderer consumes the `previews` metadata yet (`ui-preview` is the pending piece); until then the tool records references that only the `previewFile` RPC can read back.
 - The tool registers files the model explicitly names; automatic registration of every produced file (without a model call) is not implemented.
 - Byte reads are capped by `maxPreviewBytes`; a file larger than the cap fails that entry rather than truncating.
+
+<a id="dev-note"></a>
+### Dev Note
+
+<details>
+<summary>Working context for maintainers — click to expand</summary>
+
+None.
+
+</details>

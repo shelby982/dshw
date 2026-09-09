@@ -34,7 +34,7 @@ export const Config: z<Config> = z.object({
 })
 
 /** Services required before the tool registers. */
-export const inject = ['tools', 'fs', 'fileAttachments'] as const
+export const inject = ['tools', 'fs', 'fileAttachments']
 
 /** Stable Cordis plugin name. */
 export const name = 'tool-preview'
@@ -71,9 +71,9 @@ function previewRecord(ref: {
  * @param file - the workspace-relative produced-file path.
  * @param data - the file bytes read from the workspace.
  * @param signal - caller lifetime; abort kills the conversion.
- * @returns the durable attachment reference registered for preview.
+ * @returns the durable attachment reference registered for preview. Exported for
+ * tests; the tool's `execute` registers each file through this.
  */
-/** Exported for tests; the tool's execute registers each file through this. */
 export async function registerPreview(
   ctx: Context,
   file: string,
@@ -132,7 +132,7 @@ export function apply(ctx: Context, config: Config): void {
         },
       },
       render: (_args, value: PreviewValue) => [{ type: 'text', text: formatPreviewed(value.previewed) }],
-      presentationMeta: (_args, value: PreviewValue) => ({ previews: value.previews }) as never,
+      presentationMeta: (_args, value: PreviewValue) => ({ previews: value.previews }),
     },
     async execute(args: { files: string[] }, exec: ToolExecution): Promise<PreviewValue> {
       const cwd = exec.agent?.session.header.cwd

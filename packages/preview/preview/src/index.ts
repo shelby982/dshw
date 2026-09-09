@@ -54,7 +54,11 @@ export function previewsFromMeta(meta: unknown): ProducedPreview[] | undefined {
   return out
 }
 
-/** Infer the MIME type of a produced file from its path extension. */
+/**
+ * Infer the MIME type of a produced file from its path extension.
+ * @param path - the produced-file path or name.
+ * @returns the MIME type, or `application/octet-stream` for an unknown extension.
+ */
 export function mediaTypeOf(path: string): string {
   const ext = path.slice(path.lastIndexOf('.')).toLowerCase()
   switch (ext) {

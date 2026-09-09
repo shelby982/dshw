@@ -40,6 +40,7 @@ This table connects model-visible tool names to the plugin package and service s
 | `@deepseek-ai/dsh-tool-todo` | `todo_write` | `ctx.tools`, `owning Agent session` | `tool/call`, `todo/write`, `tool/result` | - | todo_write is session-owned state; UIs render the latest todo/write event as a checklist. `allowParallelInProgress` is required with no default, so the catalog states its choice: `true`, whose description invites several `in_progress` items. A deployment choosing `false` receives the same tool with a description asking for exactly one active task. |
 | `@deepseek-ai/dsh-tool-workflow` | `workflow` | `ctx.tools`, `ctx.workflowEngine`, `ctx.systemPrompt`, `a calling Agent (exec.agent parents the script children)` | `tool/call`, `tool/result` | - | - |
 | `@deepseek-ai/dsh-tool-web` | `web_fetch`, `web_search` | `ctx.tools`, `ctx.web`, `ctx.systemPrompt` | `tool/call`, `tool/result` | - | web_search and web_fetch keep provider selection behind ctx.web so model-visible schemas stay stable across backend swaps. |
+| `@deepseek-ai/dsh-tool-preview` | `preview_files` | `ctx.tools`, `ctx.fs`, `ctx.fileAttachments`, `a produced file on disk (preview_files execution)` | `tool/call`, `durable file attachment (ctx.fileAttachments.saveFile)`, `tool/result` | - | preview_files registers produced files (images, HTML, slides, documents) as previewable Web attachments; a produced PPTX is converted to a PNG thumbnail when the LibreOffice+poppler stack is present and degrades to the original PPTX otherwise. |
 
 <a id="deepseek-aidsh-tool-ask-user"></a>
 
@@ -2223,3 +2224,34 @@ Search the web for current information. Provide 1–4 queries in the required qu
 Source: [`packages/web/tool-web/src/index.ts`](../packages/web/tool-web/src/index.ts)
 
 web_search and web_fetch keep provider selection behind ctx.web so model-visible schemas stay stable across backend swaps.
+
+<a id="deepseek-aidsh-tool-preview"></a>
+
+## `@deepseek-ai/dsh-tool-preview`
+
+### `preview_files`
+
+Register produced files (images, HTML, slides, documents) so the user can preview their rendered content in the Web GUI.
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "files": {
+      "type": "array",
+      "description": "Produced file paths to make previewable.",
+      "items": {
+        "type": "string",
+        "description": "Workspace-relative path of a produced file to register for preview."
+      }
+    }
+  },
+  "required": [
+    "files"
+  ]
+}
+```
+
+Source: [`packages/preview/tool-preview/src/index.ts`](../packages/preview/tool-preview/src/index.ts)
+
+preview_files registers produced files (images, HTML, slides, documents) as previewable Web attachments; a produced PPTX is converted to a PNG thumbnail when the LibreOffice+poppler stack is present and degrades to the original PPTX otherwise.

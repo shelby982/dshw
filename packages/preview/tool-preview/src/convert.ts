@@ -4,9 +4,13 @@ import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
+/** MIME type of an Office Open XML presentation (a produced slide deck). */
 const PPTX_MEDIA_TYPE = 'application/vnd.openxmlformats-officedocument.presentationml.presentation'
 
-/** Whether a LibreOffice-like binary and poppler are available on the host. */
+/**
+ * Whether a LibreOffice-like binary and poppler are available on the host.
+ * @returns true when both `soffice` and `pdftoppm` are resolvable on PATH.
+ */
 export function canConvertPptx(): boolean {
   return runs('soffice', ['--version']) && runs('pdftoppm', ['-v'])
 }

@@ -31,7 +31,12 @@ interface PreviewState extends PreviewTurnData {
 /** The subset of kinds with a localized label; unknown kinds display as `file`. */
 export type PreviewLabelKind = 'image' | 'html' | 'pptx' | 'text' | 'json' | 'file'
 
-/** Localized-label key for one preview, collapsing unknown kinds to `file`. */
+/**
+ * Localized-label key for one preview, collapsing unknown kinds to `file`.
+ * @param kind - the declared preview kind, or undefined to infer from the media type.
+ * @param mediaType - the produced file's MIME type (used when `kind` is undefined).
+ * @returns the label key for the resolved kind.
+ */
 export function previewLabelKind(kind: PreviewKind | undefined, mediaType: string): PreviewLabelKind {
   const resolved: PreviewKind = kind ?? previewKindOf(mediaType)
   switch (resolved) {

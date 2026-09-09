@@ -52,3 +52,13 @@ No direct effect; the produced-file tool and the `previewFile` RPC own any model
 - There is currently **no consumer**: no produced-file tool yet records `previews`, and no session authorization or renderer reads it yet. The contract is the foundation the `preview-local`, `tool-preview`, and `ui-preview` pieces build on.
 - No admission limit or byte cap is imposed here; a producer controls the bytes it attaches.
 - PPT-to-image conversion (a `pptx` preview) is not implemented here; a future `preview-local` provider owns that and degrades to "open the original file" when the conversion stack is absent.
+
+<a id="dev-note"></a>
+### Dev Note
+
+<details>
+<summary>Working context for maintainers — click to expand</summary>
+
+None.
+
+</details>

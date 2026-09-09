@@ -49,6 +49,8 @@ import * as ToolCordis from '@deepseek-ai/dsh-tool-cordis'
 import * as ToolFs from '@deepseek-ai/dsh-tool-fs'
 import * as ToolFsSearch from '@deepseek-ai/dsh-tool-fs-search'
 import * as ToolStrReplaceEditor from '@deepseek-ai/dsh-tool-str-replace-editor'
+import LocalFileAttachmentStore from '@deepseek-ai/dsh-attachment-local/file-attachments'
+import * as ToolPreview from '@deepseek-ai/dsh-tool-preview'
 import TerminalSessionService from '@deepseek-ai/dsh-terminal'
 import * as ToolPty from '@deepseek-ai/dsh-tool-terminal'
 import * as ToolGoal from '@deepseek-ai/dsh-tool-goal'
@@ -589,6 +591,22 @@ const TOOL_PACKAGES: ToolPackage[] = [
     },
     note:
       'web_search and web_fetch keep provider selection behind ctx.web so model-visible schemas stay stable across backend swaps.',
+  },
+  {
+    pkg: '@deepseek-ai/dsh-tool-preview',
+    dir: 'tool-preview',
+    source: 'packages/preview/tool-preview/src/index.ts',
+    requires: ['ctx.tools', 'ctx.fs', 'ctx.fileAttachments', 'a produced file on disk (preview_files execution)'],
+    writes: ['tool/call', 'durable file attachment (ctx.fileAttachments.saveFile)', 'tool/result'],
+    async mount(ctx) {
+      // The tool injects fs and fileAttachments; the bare providers satisfy the
+      // seam so registration runs (schema harvest never executes the tool).
+      await ctx.plugin(LocalFileSystem)
+      await ctx.plugin(LocalFileAttachmentStore)
+      await ctx.plugin(ToolPreview)
+    },
+    note:
+      'preview_files registers produced files (images, HTML, slides, documents) as previewable Web attachments; a produced PPTX is converted to a PNG thumbnail when the LibreOffice+poppler stack is present and degrades to the original PPTX otherwise.',
   },
 ]
 
